@@ -1,0 +1,2 @@
+# Сборка с кешем + папка кеша
+mkdir -Force .\.tmp\buildx-cache; docker buildx build -t qdrant:v1.16.2 --cache-from "type=local,src=.tmp\buildx-cache" --cache-to "type=local,dest=.tmp\buildx-cache,mode=max" .

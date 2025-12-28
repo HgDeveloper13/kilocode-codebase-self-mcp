@@ -1,0 +1,56 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest # Qdrant, version 1.16.1
+    restart: always
+    container_name: qdrant
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__STORAGE__STORAGE_PATH=/qdrant/storage
+      
+      # --- Сервисные настройки ---
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__SERVICE__ENABLE_CORS=true
+      - QDRANT__TELEMETRY_DISABLED=true
+
+      # --- Настройки хранилища ---
+      - QDRANT__STORAGE__SNAPSHOTS_PATH=/qdrant/snapshots
+      
+      # --- Основные настройки: RAM вместо диска ---
+      - QDRANT__STORAGE__ON_DISK_PAYLOAD=false
+      - QDRANT__STORAGE__ON_DISK_VECTORS=false
+      - QDRANT__STORAGE__HNSW_INDEX__ON_DISK=false
+
+      # --- Настройки производительности ---
+      - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=0
+      - QDRANT__STORAGE__PERFORMANCE__OPTIMIZER_CPU_BUDGET=0
+      - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_REQUESTS=200
+      - QDRANT__STORAGE__PERFORMANCE__MAX_OPTIMIZATION_THREADS=4
+
+      # --- Оптимизаторы: немедленное индексирование и отключение агрессивной очистки ---
+      - QDRANT__STORAGE__OPTIMIZERS__DELETED_THRESHOLD=0.1
+      - QDRANT__STORAGE__OPTIMIZERS__VACUUM_MIN_VECTOR_NUMBER=100
+      - QDRANT__STORAGE__OPTIMIZERS__FLUSH_INTERVAL_SEC=5
+      - QDRANT__STORAGE__OPTIMIZERS__INDEXING_THRESHOLD_KB=1 # Qdrant, version 1.16.1
+      # - QDRANT__STORAGE__OPTIMIZERS__INDEXING_THRESHOLD=1 # Qdrant, version 1.7.4
+
+      # --- HNSW: компактный, RAM-only, быстрый старт ---
+      - QDRANT__STORAGE__HNSW_INDEX__M=16
+      - QDRANT__STORAGE__HNSW_INDEX__EF_CONSTRUCT=100
+      # - QDRANT__STORAGE__HNSW_INDEX__FULL_SCAN_THRESHOLD_KB=1
+      # - QDRANT__STORAGE__HNSW_INDEX__FULL_SCAN_THRESHOLD=10
+      - QDRANT__STORAGE__HNSW_INDEX__MAX_INDEXING_THREADS=0
+
+      # --- Отключаем излишние фоновые процессы ---
+      - QDRANT__WAL__WAL_CAPACITY_MB=32
+      - QDRANT__STORAGE__STRICT_MODE=false
+
+      # --- Кластеризация ---
+      - QDRANT__CLUSTER__ENABLED=false
+
+volumes:
+  qdrant_storage:

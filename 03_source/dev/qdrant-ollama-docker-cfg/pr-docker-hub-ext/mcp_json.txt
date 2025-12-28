@@ -1,0 +1,28 @@
+---
+Установка с каталога Docker MCP, Docker CLI
+https://hub.docker.com/mcp/server/docker/manual?client=Cursor
+
+Connect the MCP Toolkit gateway to Cursor using:
+> docker mcp client connect cursor -g
+
+Once connected, you can install this MCP server using:
+> docker mcp server enable docker
+
+{
+  "MCP_DOCKER": {
+    "command": "docker",
+    "args": [
+      "mcp",
+      "gateway",
+      "run"
+    ],
+    "env": {
+      "LOCALAPPDATA": "C:\\Users\\Azerty\\AppData\\Local",
+      "ProgramData": "C:\\ProgramData",
+      "ProgramFiles": "C:\\Program Files"
+    }
+  }
+}
+
+---
+

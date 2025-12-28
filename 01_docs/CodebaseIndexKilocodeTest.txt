@@ -1,0 +1,20 @@
+# Результаты поиска по кодовой базе Codebase by Kilocode, DB используется Qdrant.
+Ollama local from Docker.
+CPU intel N100.
+RAM 16 Gb.
+M.2 Disk.
+
+---
+
+NAME                                ID              SIZE      MODIFIED			VECTOR SIZE		Latency 	Speed
+all-minilm:l6-v2                    1b226e2802db    45 MB     46 hours ago		384
+embeddinggemma:latest               85462619ee72    621 MB    11 hours ago		768
+qwen3-embedding:0.6b                ac6da0dfba84    639 MB    11 hours ago		1024
+nomic-embed-text:latest             0a109f422b47    274 MB    46 hours ago		768
+
+all-minilm:33m-l12-v2-fp16          4f5da3bd944d    67 MB     10 hours ago		384
+snowflake-arctic-embed2:latest      5de93a84837d    1.2 GB    10 hours ago		1024
+snowflake-arctic-embed:latest       21ab8b9b0545    669 MB    10 hours ago		768
+snowflake-arctic-embed:33m          e8db018629b4    67 MB     10 hours ago		384				-
+qllama/multilingual-e5-small:f16    3c8dead9831d    241 MB    11 hours ago		384
+bge-m3:latest                       790764642607    1.2 GB    43 hours ago		1024

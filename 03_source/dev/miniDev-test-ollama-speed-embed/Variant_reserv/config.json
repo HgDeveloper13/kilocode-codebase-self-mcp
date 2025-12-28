@@ -1,0 +1,15 @@
+{
+  "ollama_url": "http://127.0.0.1:11434",
+  "timeout": 300,
+  "max_retries": 3,
+  "tests_per_model": 5,
+  "warmup_requests": 1,
+  "interval_between_tests": 3,
+  "models": null,
+  "output_dir": ".",
+  "check_docker": false,
+  "save_json": true,
+  "save_csv": true,
+  "save_markdown": true,
+  "save_html": true
+}

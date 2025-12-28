@@ -1,0 +1,11 @@
+Model,Status,Successful Tests,Avg Duration (s),Min Duration (s),Max Duration (s),Std Dev (s),Embedding Dim,Tokens/sec
+embeddinggemma:300m-qat-q8_0,SUCCESS,5,3.7327,0.2020,15.4005,6.5374,768,1259.58
+qwen3-embedding:0.6b-fp16,SUCCESS,5,7.4502,0.4478,35.3756,15.6108,1024,1757.76
+qwen3-embedding:0.6b-q8_0,SUCCESS,5,4.2834,0.2995,19.9937,8.7825,1024,2365.25
+embeddinggemma:300m-qat-q4_0,SUCCESS,5,2.0842,0.1515,9.6639,4.2374,768,3402.25
+all-minilm:22m-l6-v2-fp16,SUCCESS,5,0.3894,0.0611,1.6125,0.6841,384,3940.31
+bge-m3:567m-fp16,SUCCESS,5,6.8430,0.3118,32.5766,14.3860,1024,2149.10
+embeddinggemma:300m-bf16,SUCCESS,5,5.9850,0.1799,27.5282,12.0613,768,2311.17
+nomic-embed-text:137m-v1.5-fp16,SUCCESS,5,1.8709,0.2411,8.0735,3.4679,768,2009.39
+qllama/multilingual-e5-small:f16,SUCCESS,5,1.6776,0.1357,7.6681,3.3493,384,1861.17
+all-minilm:l6-v2,SUCCESS,5,0.1806,0.0576,0.5227,0.1977,384,4101.48

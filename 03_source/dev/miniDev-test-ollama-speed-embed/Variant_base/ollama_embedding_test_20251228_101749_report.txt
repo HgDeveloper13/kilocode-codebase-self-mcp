@@ -1,0 +1,136 @@
+================================================================================
+OLLAMA EMBEDDING MODELS PERFORMANCE TEST REPORT
+================================================================================
+
+Timestamp: 2025-12-28T10:17:49.511253
+Ollama URL: http://localhost:11434
+Tests per model: 5
+Timeout: 120s
+
+----------------------------------------
+SUMMARY
+----------------------------------------
+Total models: 10
+Successful: 10
+Failed: 0
+
+----------------------------------------
+RANKING BY SPEED (fastest first)
+----------------------------------------
+Rank  Model                               Time (s)     Dim      Tokens/s  
+--------------------------------------------------------------------------------
+1     all-minilm:l6-v2                    0.1806    384      4101.482     all-minilm:22m-l6-v2-fp16           0.3894    384      3940.313     qllama/multilingual-e5-small:f16    1.6776    384      1861.174     nomic-embed-text:137m-v1.5-fp16     1.8709    768      2009.395     embeddinggemma:300m-qat-q4_0        2.0842    768      3402.256     embeddinggemma:300m-qat-q8_0        3.7327    768      1259.587     qwen3-embedding:0.6b-q8_0           4.2834    1024     2365.258     embeddinggemma:300m-bf16            5.9850    768      2311.179     bge-m3:567m-fp16                    6.8430    1024     2149.1010    qwen3-embedding:0.6b-fp16           7.4502    1024     1757.76
+----------------------------------------
+DETAILED RESULTS
+----------------------------------------
+
+Model: embeddinggemma:300m-qat-q8_0
+Status: SUCCESS
+Successful tests: 5/5
+Avg duration: 3.7327s
+Duration range: 0.2020s - 15.4005s
+Std deviation: 6.5374s
+Embedding dim: 768
+Tokens/sec: 1259.58
+
+----------------------------------------
+
+Model: qwen3-embedding:0.6b-fp16
+Status: SUCCESS
+Successful tests: 5/5
+Avg duration: 7.4502s
+Duration range: 0.4478s - 35.3756s
+Std deviation: 15.6108s
+Embedding dim: 1024
+Tokens/sec: 1757.76
+
+----------------------------------------
+
+Model: qwen3-embedding:0.6b-q8_0
+Status: SUCCESS
+Successful tests: 5/5
+Avg duration: 4.2834s
+Duration range: 0.2995s - 19.9937s
+Std deviation: 8.7825s
+Embedding dim: 1024
+Tokens/sec: 2365.25
+
+----------------------------------------
+
+Model: embeddinggemma:300m-qat-q4_0
+Status: SUCCESS
+Successful tests: 5/5
+Avg duration: 2.0842s
+Duration range: 0.1515s - 9.6639s
+Std deviation: 4.2374s
+Embedding dim: 768
+Tokens/sec: 3402.25
+
+----------------------------------------
+
+Model: all-minilm:22m-l6-v2-fp16
+Status: SUCCESS
+Successful tests: 5/5
+Avg duration: 0.3894s
+Duration range: 0.0611s - 1.6125s
+Std deviation: 0.6841s
+Embedding dim: 384
+Tokens/sec: 3940.31
+
+----------------------------------------
+
+Model: bge-m3:567m-fp16
+Status: SUCCESS
+Successful tests: 5/5
+Avg duration: 6.8430s
+Duration range: 0.3118s - 32.5766s
+Std deviation: 14.3860s
+Embedding dim: 1024
+Tokens/sec: 2149.10
+
+----------------------------------------
+
+Model: embeddinggemma:300m-bf16
+Status: SUCCESS
+Successful tests: 5/5
+Avg duration: 5.9850s
+Duration range: 0.1799s - 27.5282s
+Std deviation: 12.0613s
+Embedding dim: 768
+Tokens/sec: 2311.17
+
+----------------------------------------
+
+Model: nomic-embed-text:137m-v1.5-fp16
+Status: SUCCESS
+Successful tests: 5/5
+Avg duration: 1.8709s
+Duration range: 0.2411s - 8.0735s
+Std deviation: 3.4679s
+Embedding dim: 768
+Tokens/sec: 2009.39
+
+----------------------------------------
+
+Model: qllama/multilingual-e5-small:f16
+Status: SUCCESS
+Successful tests: 5/5
+Avg duration: 1.6776s
+Duration range: 0.1357s - 7.6681s
+Std deviation: 3.3493s
+Embedding dim: 384
+Tokens/sec: 1861.17
+
+----------------------------------------
+
+Model: all-minilm:l6-v2
+Status: SUCCESS
+Successful tests: 5/5
+Avg duration: 0.1806s
+Duration range: 0.0576s - 0.5227s
+Std deviation: 0.1977s
+Embedding dim: 384
+Tokens/sec: 4101.48
+
+----------------------------------------
+

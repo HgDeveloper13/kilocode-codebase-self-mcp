@@ -1,0 +1,13 @@
+docker run -d `
+  -v ollama:/root/.ollama `
+  -p 11434:11434 `
+  --name ollama `
+  -e OLLAMA_HOST=0.0.0.0 `
+  -e OLLAMA_NUM_PARALLEL=1 `
+  -e OLLAMA_MAX_LOADED_MODELS=1 `
+  -e OLLAMA_GPU_LAYERS=0 `
+  -e OLLAMA_NUM_THREADS=4 `
+  -e OLLAMA_MAX_QUEUE=1024 `
+  -e OLLAMA_KEEP_ALIVE="30m" `
+  -e OLLAMA_DEBUG=false `
+  ollama/ollama
