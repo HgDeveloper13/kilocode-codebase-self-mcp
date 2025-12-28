@@ -1,0 +1,286 @@
+use bytemuck::{TransparentWrapper, TransparentWrapperAlloc as _};
+use derive_more::Into;
+use ordered_float::OrderedFloat;
+use pyo3::IntoPyObjectExt;
+use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
+use segment::data_types::order_by::{Direction, OrderBy, StartFrom};
+use segment::data_types::vectors::{DEFAULT_VECTOR_NAME, VectorInternal};
+use segment::index::query_optimization::rescore_formula::parsed_formula::ParsedFormula;
+use segment::json_path::JsonPath;
+use shard::query::query_enum::QueryEnum;
+use shard::query::*;
+
+use super::*;
+
+#[pyclass(name = "QueryRequest")]
+#[derive(Clone, Debug, Into)]
+pub struct PyQueryRequest(ShardQueryRequest);
+
+#[pymethods]
+impl PyQueryRequest {
+    #[new]
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        prefetches: Vec<PyPrefetch>,
+        query: Option<PyScoringQuery>,
+        filter: Option<PyFilter>,
+        score_threshold: Option<f32>,
+        limit: usize,
+        offset: usize,
+        params: Option<PySearchParams>,
+        with_vector: PyWithVector,
+        with_payload: PyWithPayload,
+    ) -> Self {
+        Self(ShardQueryRequest {
+            prefetches: PyPrefetch::peel_vec(prefetches),
+            query: query.map(ScoringQuery::from),
+            filter: filter.map(Filter::from),
+            score_threshold: score_threshold.map(OrderedFloat),
+            limit,
+            offset,
+            params: params.map(SearchParams::from),
+            with_vector: WithVector::from(with_vector),
+            with_payload: WithPayloadInterface::from(with_payload),
+        })
+    }
+}
+
+#[pyclass(name = "Prefetch")]
+#[derive(Clone, Debug, Into, TransparentWrapper)]
+#[repr(transparent)]
+pub struct PyPrefetch(ShardPrefetch);
+
+#[pymethods]
+impl PyPrefetch {
+    #[new]
+    pub fn new(
+        prefetches: Vec<PyPrefetch>,
+        query: Option<PyScoringQuery>,
+        limit: usize,
+        params: Option<PySearchParams>,
+        filter: Option<PyFilter>,
+        score_threshold: Option<f32>,
+    ) -> Self {
+        Self(ShardPrefetch {
+            prefetches: PyPrefetch::peel_vec(prefetches),
+            query: query.map(ScoringQuery::from),
+            limit,
+            params: params.map(SearchParams::from),
+            filter: filter.map(Filter::from),
+            score_threshold: score_threshold.map(OrderedFloat),
+        })
+    }
+}
+
+#[derive(Clone, Debug, Into)]
+pub struct PyScoringQuery(ScoringQuery);
+
+impl FromPyObject<'_, '_> for PyScoringQuery {
+    type Error = PyErr;
+
+    fn extract(query: Borrowed<'_, '_, PyAny>) -> PyResult<Self> {
+        #[derive(FromPyObject)]
+        enum Helper {
+            Vector(PyQuery),
+            Fusion(PyFusion),
+            OrderBy(PyOrderBy),
+            Formula(PyFormula),
+            Sample(PySample),
+            Mmr(PyMmr),
+        }
+
+        fn _variants(query: ScoringQuery) {
+            match query {
+                ScoringQuery::Vector(_) => {}
+                ScoringQuery::Fusion(_) => {}
+                ScoringQuery::OrderBy(_) => {}
+                ScoringQuery::Formula(_) => {}
+                ScoringQuery::Sample(_) => {}
+                ScoringQuery::Mmr(_) => {}
+            }
+        }
+
+        let query = match query.extract()? {
+            Helper::Vector(query) => ScoringQuery::Vector(QueryEnum::from(query)),
+            Helper::Fusion(fusion) => ScoringQuery::Fusion(FusionInternal::from(fusion)),
+            Helper::OrderBy(order_by) => ScoringQuery::OrderBy(OrderBy::from(order_by)),
+            Helper::Formula(formula) => ScoringQuery::Formula(ParsedFormula::from(formula)),
+            Helper::Sample(sample) => ScoringQuery::Sample(SampleInternal::from(sample)),
+            Helper::Mmr(mmr) => ScoringQuery::Mmr(MmrInternal::from(mmr)),
+        };
+
+        Ok(Self(query))
+    }
+}
+
+#[pyclass(name = "Fusion")]
+#[derive(Clone, Debug, Into, TransparentWrapper)]
+#[repr(transparent)]
+pub struct PyFusion(FusionInternal);
+
+#[pymethods]
+impl PyFusion {
+    #[staticmethod]
+    pub fn rrfk(rrfk: usize) -> Self {
+        Self(FusionInternal::RrfK(rrfk))
+    }
+
+    #[classattr]
+    pub const DBSF: Self = Self(FusionInternal::Dbsf);
+}
+
+#[pyclass(name = "OrderBy")]
+#[derive(Clone, Debug, Into)]
+pub struct PyOrderBy(OrderBy);
+
+#[pymethods]
+impl PyOrderBy {
+    #[new]
+    pub fn new(
+        key: PyJsonPath,
+        direction: Option<PyDirection>,
+        start_from: Option<PyStartFrom>,
+    ) -> PyResult<Self> {
+        let order_by = OrderBy {
+            key: JsonPath::from(key),
+            direction: direction.map(Direction::from),
+            start_from: start_from.map(StartFrom::from),
+        };
+
+        Ok(Self(order_by))
+    }
+}
+
+#[pyclass(name = "Direction")]
+#[derive(Copy, Clone, Debug)]
+pub enum PyDirection {
+    Asc,
+    Desc,
+}
+
+impl From<Direction> for PyDirection {
+    fn from(direction: Direction) -> Self {
+        match direction {
+            Direction::Asc => PyDirection::Asc,
+            Direction::Desc => PyDirection::Desc,
+        }
+    }
+}
+
+impl From<PyDirection> for Direction {
+    fn from(direction: PyDirection) -> Self {
+        match direction {
+            PyDirection::Asc => Direction::Asc,
+            PyDirection::Desc => Direction::Desc,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Into)]
+pub struct PyStartFrom(StartFrom);
+
+impl FromPyObject<'_, '_> for PyStartFrom {
+    type Error = PyErr;
+
+    fn extract(start_from: Borrowed<'_, '_, PyAny>) -> PyResult<Self> {
+        #[derive(FromPyObject)]
+        enum Helper {
+            Integer(IntPayloadType),
+            Float(FloatPayloadType),
+            DateTime(String),
+        }
+
+        fn _variants(start_from: StartFrom) {
+            match start_from {
+                StartFrom::Integer(_) => {}
+                StartFrom::Float(_) => {}
+                StartFrom::Datetime(_) => {}
+            }
+        }
+
+        let start_from = match start_from.extract()? {
+            Helper::Integer(int) => StartFrom::Integer(int),
+            Helper::Float(float) => StartFrom::Float(float),
+            Helper::DateTime(date_time) => {
+                let date_time = date_time.parse().map_err(|err| {
+                    PyValueError::new_err(format!("failed to parse date-time: {err}"))
+                })?;
+
+                StartFrom::Datetime(date_time)
+            }
+        };
+
+        Ok(Self(start_from))
+    }
+}
+
+impl<'py> IntoPyObject<'py> for PyStartFrom {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> PyResult<Self::Output> {
+        IntoPyObject::into_pyobject(&self, py)
+    }
+}
+
+impl<'py> IntoPyObject<'py> for &PyStartFrom {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> PyResult<Self::Output> {
+        match &self.0 {
+            StartFrom::Integer(int) => int.into_bound_py_any(py),
+            StartFrom::Float(float) => float.into_bound_py_any(py),
+            StartFrom::Datetime(date_time) => date_time.to_string().into_bound_py_any(py),
+        }
+    }
+}
+
+#[pyclass(name = "Sample")]
+#[derive(Copy, Clone, Debug)]
+pub enum PySample {
+    Random,
+}
+
+impl From<SampleInternal> for PySample {
+    fn from(sample: SampleInternal) -> Self {
+        match sample {
+            SampleInternal::Random => PySample::Random,
+        }
+    }
+}
+
+impl From<PySample> for SampleInternal {
+    fn from(sample: PySample) -> Self {
+        match sample {
+            PySample::Random => SampleInternal::Random,
+        }
+    }
+}
+
+#[pyclass(name = "Mmr")]
+#[derive(Clone, Debug, Into)]
+pub struct PyMmr(MmrInternal);
+
+#[pymethods]
+impl PyMmr {
+    #[new]
+    pub fn new(
+        vector: PyNamedVector,
+        using: Option<String>,
+        lambda: f32,
+        candidates_limit: usize,
+    ) -> PyResult<Self> {
+        let mmr = MmrInternal {
+            vector: VectorInternal::try_from(vector)?,
+            using: using.unwrap_or_else(|| DEFAULT_VECTOR_NAME.to_string()),
+            lambda: OrderedFloat(lambda),
+            candidates_limit,
+        };
+
+        Ok(Self(mmr))
+    }
+}
