@@ -1,1 +1,0 @@
-# Конфигурационные файлы для проекта miniDev-fix-qdrant-all-collections

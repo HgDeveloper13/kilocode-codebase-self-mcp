@@ -1,0 +1,29 @@
+# Build artifacts
+bin/
+obj/
+**/bin/
+**/obj/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+*.csproj.user
+
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Env
+.env
+*.env

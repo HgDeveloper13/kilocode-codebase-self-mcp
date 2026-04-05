@@ -1,0 +1,61 @@
+{
+    "mcpServers": {
+      "Roblox Studio": {
+        "args": [
+          "--stdio"
+        ],
+        "command": "C:\\mcp-pack\\roblox-mcp\\rbx-studio-mcp.exe",
+        "disabledTools": [],
+        "alwaysAllow": [
+          "insert_model",
+          "run_code"
+        ],
+        "disabled": false
+      },
+      "Google Workspace": {
+        "command": "docker",
+        "args": [
+          "run",
+          "--rm",
+          "-i",
+          "-e",
+          "SERVICE_ACCOUNT_PATH=/app/service-account-key.json",
+          "-e",
+          "DRIVE_FOLDER_ID=1SRo-lytZj_7cehvUYN5eN7QMONca8EJA",
+          "-e",
+          "ENABLE_CREATE_TOOLS=false",
+          "-v",
+          "C:/Users/Azerty/.gemini/service-account-key.json:/app/service-account-key.json:ro",
+          "mcp-google-workspace-simple:latest"
+        ],
+        "disabled": true,
+        "alwaysAllow": [
+          "get_sheet_data",
+          "get_sheet_formulas",
+          "update_cells",
+          "batch_update_cells",
+          "add_rows",
+          "add_columns",
+          "list_sheets",
+          "copy_sheet",
+          "rename_sheet",
+          "get_multiple_sheet_data",
+          "get_multiple_spreadsheet_summary",
+          "create_sheet",
+          "list_spreadsheets",
+          "share_spreadsheet",
+          "get_doc_content",
+          "get_doc_text",
+          "insert_text_into_doc",
+          "delete_text_from_doc",
+          "search_drive_files",
+          "upload_file_to_drive",
+          "download_file_from_drive",
+          "delete_file_from_drive",
+          "update_file_in_drive",
+          "move_file_in_drive",
+          "copy_file_in_drive"
+        ]
+      }
+    }
+  }

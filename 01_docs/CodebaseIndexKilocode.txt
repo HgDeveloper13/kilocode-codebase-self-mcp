@@ -77,19 +77,19 @@ nomic-embed-text:latest             0a109f422b47    274 MB    46 hours ago		768
 
 ---
 
-| NAME                                | ID              | SIZE      | MODIFIED         | **VECTOR SIZE** | Priorite |
+| NAME                                | ID              | SIZE      | MODIFIED         | **VECTOR SIZE** | RU	    |
 |-------------------------------------|-----------------|-----------|------------------|-----------------|----------|
 | qwen3-embedding:0.6b-fp16           | 67a7592a8852    | 1.2 GB    | 8 minutes ago    | **1024**        |          |
-| qwen3-embedding:0.6b-q8_0           | ac6da0dfba84    | 639 MB    | 10 minutes ago   | **1024**        | !!!      | FAIL time > 60 sec
+| qwen3-embedding:0.6b-q8_0           | ac6da0dfba84    | 639 MB    | 10 minutes ago   | **1024**        |          | 
 | bge-m3:567m-fp16                    | 790764642607    | 1.2 GB    | 30 minutes ago   | **1024**        |          |
 
-| embeddinggemma:300m-qat-q8_0        | e84a7acc2394    | 338 MB    | 3 minutes ago    | **768**         | !!!      |
-| embeddinggemma:300m-qat-q4_0        | 101341d65c2c    | 238 MB    | 20 minutes ago   | **768**         |          | FAIL time > 60 sec
+| embeddinggemma:300m-qat-q8_0        | e84a7acc2394    | 338 MB    | 3 minutes ago    | **768**         |          |
+| embeddinggemma:300m-qat-q4_0        | 101341d65c2c    | 238 MB    | 20 minutes ago   | **768**         |    -     | 
 | embeddinggemma:300m-bf16            | 85462619ee72    | 621 MB    | 30 minutes ago   | **768**         |          |
-| nomic-embed-text:137m-v1.5-fp16     | 0a109f422b47    | 274 MB    | 30 minutes ago   | **768**         |          | FAIL time > 60 sec
+| nomic-embed-text:137m-v1.5-fp16     | 0a109f422b47    | 274 MB    | 30 minutes ago   | **768**         |          | 
 
-* qllama/multilingual-e5-small:f16    | 3c8dead9831d    | 241 MB    | 27 hours ago     | **384**         | !!       | 30 sec
-х all-minilm:33m-l12-v2-fp16          | 4f5da3bd944d    | 67 MB     | 26 hours ago     | **384**         | !        | 35 sec
+* qllama/multilingual-e5-small:f16    | 3c8dead9831d    | 241 MB    | 27 hours ago     | **384**         |          | 30 sec
+х all-minilm:33m-l12-v2-fp16          | 4f5da3bd944d    | 67 MB     | 26 hours ago     | **384**         |          | 35 sec
 | all-minilm:l6-v2                    | 1b226e2802db    | 45 MB     | 2 days ago       | **384**         |          | 20 sec
 > all-minilm:22m-l6-v2-fp16           | 1b226e2802db    | 45 MB     | 29 minutes ago   | **384**         |          | 20 sec
 

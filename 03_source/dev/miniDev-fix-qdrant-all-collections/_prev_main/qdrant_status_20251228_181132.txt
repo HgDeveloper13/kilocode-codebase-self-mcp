@@ -1,0 +1,15 @@
+QDRANT COLLECTIONS STATUS REPORT
+Time: 2025-12-28 18:11:32
+URL: https://68880f2e-13ca-4846-bee8-c3b7c3591395.us-west-2-0.aws.cloud.qdrant.io:6333
+
+SUMMARY:
+- Total collections: 3
+- Successful: 3
+- With errors: 0
+- Optimized: 3
+- Needs fix: 0
+
+COLLECTIONS DETAILS:
+ 1. star_charts - 5 points, threshold: 1
+ 2. midjourney - 5417 points, threshold: 1
+ 3. dinosaurs - 2 points, threshold: 1

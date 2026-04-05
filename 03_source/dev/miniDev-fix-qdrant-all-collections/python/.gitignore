@@ -1,0 +1,190 @@
+# Конфигурация с API ключами
+python/.config/config.json
+.python
+
+# Логи и отчеты
+logs/
+reports/
+*.log
+*.txt
+
+# Отчеты проекта
+qdrant_*_report_*.txt
+qdrant_*_status_*.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Виртуальные окружения
+.config
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Операционная система
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Переменные окружения
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Временные файлы
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Кэш
+.cache/
+.pytest_cache/
+
+# Дополнительные GitHub специфичные файлы
+.github/
+.gitattributes
+
+# Файлы конфигурации с секретами
+*.key
+*.pem
+*.p12
+*.pfx
+*.secrets
+*.credentials
+
+# Логи и временные файлы приложений
+*.log.*
+logs/
+*.out
+*.err
+
+# Документация сборки
+docs/_build/
+docs/build/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Vagrant
+.vagrant/
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.override.yml
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Editor files (дополнительно)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+.vscode/workspace.code-workspace
+.idea/workspace.xml
+.idea/usage.statistics.xml
+.idea/dictionaries
+.idea/libraries
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries
+.idea/jarRepositories.gradle
+*.iml
+*.ipr
+*.iws
