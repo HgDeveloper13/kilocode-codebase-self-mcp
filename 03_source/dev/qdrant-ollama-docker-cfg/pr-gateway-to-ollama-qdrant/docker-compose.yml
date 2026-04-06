@@ -42,7 +42,7 @@ services:
     image: ollama/ollama:0.13.5
     container_name: ollama
     volumes:
-      - ollama_data:/root/.ollama
+      - ollama:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-1}
@@ -80,5 +80,9 @@ networks:
     driver: bridge
 
 volumes:
-  ollama_data:
+  ollama:
+    external: true
+    name: ollama
   qdrant_storage:
+    external: true
+    name: qdrant_storage

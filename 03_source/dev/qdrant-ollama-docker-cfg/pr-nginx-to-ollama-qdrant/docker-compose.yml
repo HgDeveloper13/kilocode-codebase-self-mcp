@@ -57,7 +57,11 @@ services:
 
 volumes:
   ollama:
+    external: true
+    name: ollama
   qdrant_storage:
+    external: true
+    name: qdrant_storage
 
 networks:
   internal:
