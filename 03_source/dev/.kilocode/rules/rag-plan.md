@@ -1,6 +1,44 @@
 # План разработки: Gateway Local Self - RAG-стека
 
-- .NET 8, ASP.NET 8
+- Используем активно при разработки знания/документацию через use context7. К примеру нужна "информация по ollama asp.net .net 8 docs use context7", тогда будет получена актуальная документация по данной теме!
+
+## Расположение текущего проекта
+
+> qdrant-ollama-docker-cfg\pr-core-train-to-ollama-qdrant
+
+- Только в данной папке проводим изменения!
+
+## Работаем на стеке
+
+> C# (.NET 8, ASP.NET 8) + Redis (8.6.2-alpine) + Nginx (1.28.1-alpine) + Ollama (0.13.5) + Qdrant (v1.16.2)
+
+## Место Docker, где распологаются контейнеры
+
+> Работаем на локальной ПК! Ни каких VPS! Работаем на windows 11, Docker Desctop 4.47.0 (206054), Среда разработки VS, ИИ ассистент kilocode.ai
+
+## Как работаем с нашим RAG
+
+> ИИ ассистент (kilocode.ai/kilo.ai) с VS обращается по базовым адресам localhost:11434 и localhost:6333
+
+## План разработки - Список задач
+
+> Список задач которые нужно будет решить
+
+## Контекст плана разработки
+
+> Информация которую нужно помнить при разработки по данному плану
+
+## Краткая документация по нашему стеку
+
+### В документации Ollama есть два разных API для embeddings
+
+- Нативный Ollama API: /api/embed (требует поля input, а не prompt)
+- OpenAI-совместимый API: /v1/embeddings (требует поля input, а не prompt)
+
+## Dirts Data
+
+> Еще в файле task.md в блоке подзадачах, есть информация полезная, можно будет из нее инсайты взять для плана разработки данного
+
 - Nginx единственная точка входа внешнего трафика. Другие контейнеры только внутри контейнера могут общаться.
 - Gateway только получает трафик тяжелый от nginx (весь трафик на ollama), порт 11434 ollama заберает себе gateway!
 - Ollama порт 11435
@@ -18,7 +56,7 @@
 - Redis: --maxmemory 256mb
 - Qdrant: Используется кастомный config.yaml + env переменные
 
-## docker image ls
+## docker image ls, используем уже скаченные images
 
 REPOSITORY                               TAG              IMAGE ID       CREATED          SIZE
 redis                                    8.6.2-alpine     81b6f81d6a6c   12 days ago      134MB
@@ -29,7 +67,7 @@ ollama/ollama                            0.13.5           2c9595c555fd   3 month
 qdrant/qdrant                            v1.16.2          dab6de32f7b2   4 months ago     272MB
 alpine                                   latest           4b7ce07002c6   5 months ago     12.8MB
 
-## Ollama Models
+## Ollama Models, доступные модели embeddings
 
 | NAME                                | ID              | SIZE      | MODIFIED         | **VECTOR SIZE** | RU	    |
 |-------------------------------------|-----------------|-----------|------------------|-----------------|----------|
