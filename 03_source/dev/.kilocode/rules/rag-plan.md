@@ -28,3 +28,27 @@ nginx                                    1.28.1-alpine    35d0527c0661   3 month
 ollama/ollama                            0.13.5           2c9595c555fd   3 months ago     6.14GB
 qdrant/qdrant                            v1.16.2          dab6de32f7b2   4 months ago     272MB
 alpine                                   latest           4b7ce07002c6   5 months ago     12.8MB
+
+## Ollama Models
+
+| NAME                                | ID              | SIZE      | MODIFIED         | **VECTOR SIZE** | RU	    |
+|-------------------------------------|-----------------|-----------|------------------|-----------------|----------|
+| qwen3-embedding:0.6b-fp16           | 67a7592a8852    | 1.2 GB    | 8 minutes ago    | **1024**        |          |
+| qwen3-embedding:0.6b-q8_0           | ac6da0dfba84    | 639 MB    | 10 minutes ago   | **1024**        |          | 
+| bge-m3:567m-fp16                    | 790764642607    | 1.2 GB    | 30 minutes ago   | **1024**        |          |
+
+| nomic-embed-text:137m-v1.5-fp16     | 0a109f422b47    | 274 MB    | 30 minutes ago   | **768**         |          | 
+
+* qllama/multilingual-e5-small:f16    | 3c8dead9831d    | 241 MB    | 27 hours ago     | **384**         |          |
+| all-minilm:l6-v2                    | 1b226e2802db    | 45 MB     | 2 days ago       | **384**         |          |
+> all-minilm:22m-l6-v2-fp16           | 1b226e2802db    | 45 MB     | 29 minutes ago   | **384**         |          |
+
+## Notes
+
+- План разработки еще пока в стадии разработки активной
+- Ollama Models, необходимо с поддержкой русского языка
+- Ollama Models, необходима с размерностью больше или равно 768, так как codebase kilo.ai, отправляет большие куски кода
+- Ollama Models, с маленькими размерностями **384** оставляем для других codebase.
+- Не выдумуываем, если, чего не знаем, спрашиваем у пользователя
+- Используем активно при разработки знания/документацию через use context7. К примеру нужна "информация по ollama asp.net use context7", тогда будет получена актуальная документация по данной теме!
+- 2026.04 начало разработки данного плана RAG
