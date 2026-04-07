@@ -2,7 +2,7 @@
 
 [CONTEXT]
 
-Проект RAG использует стек: .NET 8 Gateway + Redis + Nginx + Ollama + Qdrant.
+Проект RAG использует стек: .NET 8 Gateway + Redis + Nginx + Ollama + Qdrant. В процессе работы реализованы механизмы кэширования и ожидания кэша для оптимизации повторных запросов.
 
 [INSTRUCTION]
 
@@ -36,6 +36,17 @@
 | Формат ключа | `emb:{hash}` |
 | TTL | 7 дней (604800 секунд) |
 | Хранилище | Redis |
+
+### Механизм ожидания кэша (Cache Wait)
+
+| Параметр | Значение |
+|----------|----------|
+| In-progress ключ | `in-progress:emb:{hash}` |
+| In-progress TTL | 5 минут (300 сек) |
+| Poll interval | 2 секунды |
+| Max wait time | 5 минут (300 сек) |
+| Таймаут клиента | Код 499 (Client closed) |
+| Таймаут ожидания | Код 504 (Gateway Timeout) |
 
 ---
 
@@ -80,6 +91,28 @@ docker compose up -d --force-recreate nginx gateway
 
 ### Как работает кэширование в Gateway?
 Кэш формируется из SHA256 хеша всего тела запроса (модель + input/prompt). Ключ имеет формат `emb:{hex_hash}`. При повторном запросе с тем же телом - возвращается кэшированный результат без обращения к Ollama.
+
+### Как работает механизм ожидания кэша?
+1. При запросе: проверить Redis кэш по (model + hash prompt)
+2. Если есть в кэше → вернуть сразу
+3. Если нет в кэше:
+   - Проверить in-progress flag (`in-progress:emb:{hash}`)
+   - Если flag установлен → ждать (poll до 5 минут) пока кэш заполнится
+   - Если flag не установлен → отправить запрос в Ollama и записать в кэш
+
+### Как проверить in-progress ключи в Redis?
+
+```bash
+docker exec -it redis-cache redis-cli
+> KEYS in-progress:*
+> TTL <key>
+```
+
+### Что происходит при отмене клиентом запроса?
+При отмене запроса (клиент закрыл соединение) Gateway:
+- Проверяет `context.RequestAborted.IsCancellationRequested`
+- Возвращает статус 499 (Client closed request)
+- Не удаляет in-progress flag (его TTL сам очистит через 5 минут)
 
 ### Как проверить кэш Redis?
 
@@ -160,7 +193,17 @@ docker exec -it redis-cache redis-cli
 | 3 | Проверить TTL ключа | `TTL <key>` |
 | 4 | Получить значение ключа | `GET <key>` |
 
----
+### Workflow: Реализация механизма ожидания кэша для повторных запросов
+
+| Шаг | Действие | Код/Проверка |
+|-----|----------|--------------|
+| 1 | Добавить in-progress flag | `await db.StringSetAsync($"in-progress:{cacheKey}", "1", TimeSpan.FromSeconds(300))` |
+| 2 | Проверить in-progress при cache miss | `var inProgress = await db.StringGetAsync($"in-progress:{cacheKey}")` |
+| 3 | Реализовать poll логику | `await Task.Delay(2000)` в цикле до 5 минут |
+| 4 | Добавить проверку отмены клиента | `if (context.RequestAborted.IsCancellationRequested)` |
+| 5 | Обработать таймаут | Вернуть 504 при истечении 5 минут |
+| 6 | Удалить in-progress flag | `await db.KeyDeleteAsync($"in-progress:{cacheKey}")` в finally блоке |
+| 7 | Тестировать | Два параллельных запроса: первый - в Ollama, второй - ждёт кэш |
 
 ---
 

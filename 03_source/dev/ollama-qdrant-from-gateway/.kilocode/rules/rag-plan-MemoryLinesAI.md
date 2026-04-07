@@ -1,6 +1,7 @@
-# Текущий план разработки проекта RAG: Nginx, Gateway, Qdrant, Ollama, Redis, ASP.NET 8, .NET 8, Docker Container
+# План реализации: ASP.NET Core Gateway с Redis кэшем для Embeddings
 
 - Используем активно при разработки знания/документацию через use context7. К примеру нужна "информация по ollama asp.net .net 8 docs use context7", тогда будет получена актуальная документация по данной теме!
+- Основные элементы системы: Nginx, Gateway, Qdrant, Ollama, Redis, ASP.NET 8, .NET 8, Docker Container
 
 ## Расположение текущего проекта
 
@@ -24,9 +25,54 @@
 
 > Список задач которые нужно будет решить
 
+- Добавить ASP.NET Core Gateway как кэш-слой для embedding запросов к Ollama. Gateway проверяет Redis кэш перед отправкой запроса в Ollama, что ускоряет повторные запросы.
+
 ## Контекст плана разработки
 
 > Информация которую нужно помнить при разработки по данному плану
+
+### Целевая архитектура
+
+**Проверка:** Архитектура ВЕРНА!
+- Nginx публикует порты 11434 (Ollama), 6333 (Qdrant REST), 6334 (Qdrant gRPC)
+- Gateway работает на порту 11435 внутри сети
+- Embedding endpoints (/api/embed, /api/embeddings, /v1/embeddings) → Gateway → Redis → Ollama
+- Chat/Generate endpoints → Ollama напрямую (через Nginx)
+- Qdrant → Nginx → Qdrant
+
+```
+Client → Nginx (:11434, :6333, :6334)
+              ├── /api/embed, /api/embeddings, /v1/embeddings → Gateway (:11435) → Redis → Ollama
+              ├── /api/chat, /api/generate → Ollama напрямую
+              └── Qdrant REST/gRPC → Qdrant напрямую
+```
+
+### Стек технологий
+
+| Компонент | Версия | Назначение |
+|-----------|--------|------------|
+| Nginx | 1.28.1-alpine | Reverse proxy, единственная точка входа |
+| ASP.NET Core | 8.0 LTS | Gateway с кэш-логикой |
+| Redis | 8.6.2-alpine | Кэш для embeddings (TTL 7 дней) |
+| Ollama | 0.13.5 | Embedding генерация |
+| Qdrant | v1.16.2 | Vector database (без изменений) |
+
+### Структура проекта
+
+```
+<путь-до-проекта>/
+├── docker-compose.yml          # Основной compose файл
+├── gateway/                  # .NET 8 Gateway
+│   ├── Dockerfile
+│   └── src/EmbeddingGateway/
+│       ├── Program.cs        # Реализация Gateway с Redis кэшем
+│       └── EmbeddingGateway.csproj
+├── nginx/
+│   └── nginx.conf         # Nginx конфиг с роутингом
+├── ollama/                 # (预留) для модельных файлов
+└── qdrant/
+    └── config.yaml   # Qdrant конфигурация
+```
 
 ## Краткая документация по нашему стеку
 
@@ -34,6 +80,92 @@
 
 - Нативный Ollama API: /api/embed (требует поля input, а не prompt)
 - OpenAI-совместимый API: /v1/embeddings (требует поля input, а не prompt)
+
+### API совместимость
+
+Gateway полностью совместим с Ollama API для embedding endpoints:
+
+#### Нативный Ollama API - Request format (/api/embed)
+
+```json
+{
+  "model": "nomic-embed-text",
+  "input": "Hello world"
+}
+```
+
+#### Нативный Ollama API - Response format (/api/embed)
+
+```json
+{
+  "model": "nomic-embed-text",
+  "embeddings": [[0.123, -0.456, 0.789, ...]]
+}
+```
+
+#### OpenAI-совместимый API - Request format (/v1/embeddings)
+
+```json
+{
+  "model": "nomic-embed-text",
+  "input": "Hello world"
+}
+```
+
+#### OpenAI-совместимый API - Response format (/v1/embeddings)
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "embedding",
+      "embedding": [0.123, -0.456, 0.789, ...],
+      "index": 0
+    }
+  ],
+  "model": "nomic-embed-text",
+  "usage": {
+    "prompt_tokens": 3,
+    "total_tokens": 3
+  }
+}
+```
+
+Клиент не замечает разницы между прямым запросом к Ollama и запросом через Gateway.
+
+### Проверка работы сервисов
+
+Внешние клиенты используют стандартные адреса:
+- http://localhost:11434 — Ollama
+- http://localhost:6333 — Qdrant
+
+#### Проверка Ollama
+
+```bash
+# Базовая проверка
+curl http://localhost:11434
+# → "Ollama is running"
+
+# Список моделей
+curl http://localhost:11434/api/tags
+# → список моделей
+
+# Проверка через docker exec
+docker exec ollama ollama list
+```
+
+#### Проверка Qdrant
+
+```bash
+# Базовая проверка
+curl http://localhost:6333
+# → {"title":"qdrant - vector search engine","version":"1.16.1",...}
+
+# Dashboard
+curl http://localhost:6333/dashboard
+# → перенаправит в UI (если браузер)
+```
 
 ## Dirts Data
 
@@ -82,9 +214,9 @@ alpine                                   latest           4b7ce07002c6   5 month
 
 | nomic-embed-text:137m-v1.5-fp16     | 0a109f422b47    | 274 MB    | 30 minutes ago   | **768**         |          | 
 
-* qllama/multilingual-e5-small:f16    | 3c8dead9831d    | 241 MB    | 27 hours ago     | **384**         |          |
+| qllama/multilingual-e5-small:f16    | 3c8dead9831d    | 241 MB    | 27 hours ago     | **384**         |          |
 | all-minilm:l6-v2                    | 1b226e2802db    | 45 MB     | 2 days ago       | **384**         |          |
-> all-minilm:22m-l6-v2-fp16           | 1b226e2802db    | 45 MB     | 29 minutes ago   | **384**         |          |
+| all-minilm:22m-l6-v2-fp16           | 1b226e2802db    | 45 MB     | 29 minutes ago   | **384**         |          |
 
 ## Notes
 
@@ -95,3 +227,4 @@ alpine                                   latest           4b7ce07002c6   5 month
 - Не выдумуываем, если, чего не знаем, спрашиваем у пользователя
 - Используем активно при разработки знания/документацию через use context7. К примеру нужна "информация по ollama asp.net use context7", тогда будет получена актуальная документация по данной теме!
 - 2026.04 начало разработки данного плана RAG
+- Стабильная версия готова RAG с кэшем, а так с учетом возможных повторных запросов к ollama
