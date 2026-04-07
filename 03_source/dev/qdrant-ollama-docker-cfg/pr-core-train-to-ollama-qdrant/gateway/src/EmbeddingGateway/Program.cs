@@ -23,6 +23,12 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 
 var app = builder.Build();
 
+// Constants for cache settings (moved to class level for static function access)
+const int CacheTtlDays = 7;
+const int InProgressTtlSeconds = 300; // 5 minutes max for processing
+const int PollIntervalMs = 2000; // Poll every 2 seconds
+const int MaxWaitTimeSeconds = 300; // Max wait 5 minutes
+
 // Health check endpoint
 app.MapGet("/health", async (IConnectionMultiplexer redis, HttpClient httpClient) =>
 {
@@ -46,16 +52,15 @@ app.MapGet("/health", async (IConnectionMultiplexer redis, HttpClient httpClient
     return status;
 });
 
-// Embed endpoint with Redis caching (native Ollama API)
+// Embed endpoint with Redis caching AND wait-for-cache mechanism (native Ollama API)
 app.MapPost("/api/embed", async (HttpContext context, IConnectionMultiplexer redis, IHttpClientFactory httpClientFactory) =>
 {
     var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
-    
-    // Generate cache key from request body
     var cacheKey = GenerateCacheKey(body);
     
-    // Try to get from Redis cache
     var db = redis.GetDatabase();
+    
+    // Try to get from Redis cache
     var cachedResult = await db.StringGetAsync(cacheKey);
     
     if (cachedResult.HasValue)
@@ -65,36 +70,57 @@ app.MapPost("/api/embed", async (HttpContext context, IConnectionMultiplexer red
         return;
     }
     
-    // Cache miss - forward to Ollama (native API)
-    var ollamaClient = httpClientFactory.CreateClient();
-    ollamaClient.BaseAddress = new Uri(ollamaUrl);
-    ollamaClient.Timeout = TimeSpan.FromMinutes(5);
+    // Cache miss - check if another client is already processing this request
+    var inProgressKey = $"in-progress:{cacheKey}";
+    var inProgress = await db.StringGetAsync(inProgressKey);
     
-    var content = new StringContent(body, Encoding.UTF8, "application/json");
-    var response = await ollamaClient.PostAsync("/api/embed", content);
-    var responseContent = await response.Content.ReadAsStringAsync();
-    
-    if (response.IsSuccessStatusCode)
+    if (inProgress.HasValue)
     {
-        // Store in Redis cache (7 days TTL)
-        await db.StringSetAsync(cacheKey, responseContent, TimeSpan.FromDays(7));
+        // Another client is processing - wait for cache to be ready
+        await WaitForCacheAsync(context, db, cacheKey, inProgressKey);
+        return;
     }
     
-    context.Response.ContentType = "application/json";
-    context.Response.StatusCode = (int)response.StatusCode;
-    await context.Response.WriteAsync(responseContent);
+    // This client will process the request
+    // Set in-progress flag (expires in 5 minutes)
+    await db.StringSetAsync(inProgressKey, "1", TimeSpan.FromSeconds(InProgressTtlSeconds));
+    
+    try
+    {
+        var ollamaClient = httpClientFactory.CreateClient();
+        ollamaClient.BaseAddress = new Uri(ollamaUrl);
+        ollamaClient.Timeout = TimeSpan.FromMinutes(5);
+        
+        var content = new StringContent(body, Encoding.UTF8, "application/json");
+        var response = await ollamaClient.PostAsync("/api/embed", content);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        
+        if (response.IsSuccessStatusCode)
+        {
+            // Store in Redis cache (7 days TTL)
+            await db.StringSetAsync(cacheKey, responseContent, TimeSpan.FromDays(CacheTtlDays));
+        }
+        
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)response.StatusCode;
+        await context.Response.WriteAsync(responseContent);
+    }
+    finally
+    {
+        // Remove in-progress flag
+        await db.KeyDeleteAsync(inProgressKey);
+    }
 });
 
-// Embeddings endpoint with Redis caching (native Ollama API)
+// Embeddings endpoint with Redis caching AND wait-for-cache mechanism (native Ollama API)
 app.MapPost("/api/embeddings", async (HttpContext context, IConnectionMultiplexer redis, IHttpClientFactory httpClientFactory) =>
 {
     var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
-    
-    // Generate cache key from request body
     var cacheKey = GenerateCacheKey(body);
     
-    // Try to get from Redis cache
     var db = redis.GetDatabase();
+    
+    // Try to get from Redis cache
     var cachedResult = await db.StringGetAsync(cacheKey);
     
     if (cachedResult.HasValue)
@@ -104,65 +130,150 @@ app.MapPost("/api/embeddings", async (HttpContext context, IConnectionMultiplexe
         return;
     }
     
-    // Cache miss - forward to Ollama (native API)
-    var ollamaClient = httpClientFactory.CreateClient();
-    ollamaClient.BaseAddress = new Uri(ollamaUrl);
-    ollamaClient.Timeout = TimeSpan.FromMinutes(5);
+    // Cache miss - check if another client is already processing this request
+    var inProgressKey = $"in-progress:{cacheKey}";
+    var inProgress = await db.StringGetAsync(inProgressKey);
     
-    var content = new StringContent(body, Encoding.UTF8, "application/json");
-    var response = await ollamaClient.PostAsync("/api/embeddings", content);
-    var responseContent = await response.Content.ReadAsStringAsync();
-    
-    if (response.IsSuccessStatusCode)
+    if (inProgress.HasValue)
     {
-        // Store in Redis cache (7 days TTL)
-        await db.StringSetAsync(cacheKey, responseContent, TimeSpan.FromDays(7));
+        // Another client is processing - wait for cache to be ready
+        await WaitForCacheAsync(context, db, cacheKey, inProgressKey);
+        return;
     }
     
-    context.Response.ContentType = "application/json";
-    context.Response.StatusCode = (int)response.StatusCode;
-    await context.Response.WriteAsync(responseContent);
+    // This client will process the request
+    await db.StringSetAsync(inProgressKey, "1", TimeSpan.FromSeconds(InProgressTtlSeconds));
+    
+    try
+    {
+        var ollamaClient = httpClientFactory.CreateClient();
+        ollamaClient.BaseAddress = new Uri(ollamaUrl);
+        ollamaClient.Timeout = TimeSpan.FromMinutes(5);
+        
+        var content = new StringContent(body, Encoding.UTF8, "application/json");
+        var response = await ollamaClient.PostAsync("/api/embeddings", content);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        
+        if (response.IsSuccessStatusCode)
+        {
+            await db.StringSetAsync(cacheKey, responseContent, TimeSpan.FromDays(CacheTtlDays));
+        }
+        
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)response.StatusCode;
+        await context.Response.WriteAsync(responseContent);
+    }
+    finally
+    {
+        await db.KeyDeleteAsync(inProgressKey);
+    }
 });
 
-// OpenAI-compatible /v1/embeddings endpoint (NEW!)
+// OpenAI-compatible /v1/embeddings endpoint with wait-for-cache mechanism
 app.MapPost("/v1/embeddings", async (HttpContext context, IConnectionMultiplexer redis, IHttpClientFactory httpClientFactory) =>
 {
     var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
-    
-    // Generate cache key from request body
     var cacheKey = GenerateCacheKey(body);
     
-    // Try to get from Redis cache
     var db = redis.GetDatabase();
+    
+    // Try to get from Redis cache
     var cachedResult = await db.StringGetAsync(cacheKey);
     
     if (cachedResult.HasValue)
     {
-        // Convert response from native format to OpenAI format if needed
         await WriteOpenAiResponse(context, cachedResult!, body);
         return;
     }
     
-    // Cache miss - convert from OpenAI format to native format for Ollama
-    var nativeRequest = ConvertToNativeFormat(body);
+    // Cache miss - check if another client is already processing this request
+    var inProgressKey = $"in-progress:{cacheKey}";
+    var inProgress = await db.StringGetAsync(inProgressKey);
     
-    var ollamaClient = httpClientFactory.CreateClient();
-    ollamaClient.BaseAddress = new Uri(ollamaUrl);
-    ollamaClient.Timeout = TimeSpan.FromMinutes(5);
-    
-    var content = new StringContent(nativeRequest, Encoding.UTF8, "application/json");
-    var response = await ollamaClient.PostAsync("/api/embed", content);
-    var responseContent = await response.Content.ReadAsStringAsync();
-    
-    if (response.IsSuccessStatusCode)
+    if (inProgress.HasValue)
     {
-        // Store in Redis cache (7 days TTL)
-        await db.StringSetAsync(cacheKey, responseContent, TimeSpan.FromDays(7));
+        // Another client is processing - wait for cache to be ready
+        await WaitForCacheAsync(context, db, cacheKey, inProgressKey);
+        return;
     }
     
-    // Convert response to OpenAI format
-    await WriteOpenAiResponse(context, responseContent, body);
+    // This client will process the request
+    await db.StringSetAsync(inProgressKey, "1", TimeSpan.FromSeconds(InProgressTtlSeconds));
+    
+    try
+    {
+        // Convert from OpenAI format to native format
+        var nativeRequest = ConvertToNativeFormat(body);
+        
+        var ollamaClient = httpClientFactory.CreateClient();
+        ollamaClient.BaseAddress = new Uri(ollamaUrl);
+        ollamaClient.Timeout = TimeSpan.FromMinutes(5);
+        
+        var content = new StringContent(nativeRequest, Encoding.UTF8, "application/json");
+        var response = await ollamaClient.PostAsync("/api/embed", content);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        
+        if (response.IsSuccessStatusCode)
+        {
+            await db.StringSetAsync(cacheKey, responseContent, TimeSpan.FromDays(CacheTtlDays));
+        }
+        
+        await WriteOpenAiResponse(context, responseContent, body);
+    }
+    finally
+    {
+        await db.KeyDeleteAsync(inProgressKey);
+    }
 });
+
+// Helper method to wait for cache to be ready (poll mechanism) - using const parameters
+static async Task WaitForCacheAsync(HttpContext context, IDatabase db, string cacheKey, string inProgressKey)
+{
+    var startTime = DateTime.UtcNow;
+    var maxWaitTime = TimeSpan.FromSeconds(MaxWaitTimeSeconds);
+    const int pollInterval = PollIntervalMs;
+    const int maxWait = MaxWaitTimeSeconds;
+    
+    while (DateTime.UtcNow - startTime < maxWaitTime)
+    {
+        // Check if client disconnected
+        if (context.RequestAborted.IsCancellationRequested)
+        {
+            context.Response.StatusCode = 499; // Client closed request
+            return;
+        }
+        
+        // Check if in-progress flag is still set (another client is still processing)
+        var inProgress = await db.StringGetAsync(inProgressKey);
+        if (!inProgress.HasValue)
+        {
+            // Processing done - check cache
+            var cachedResult = await db.StringGetAsync(cacheKey);
+            if (cachedResult.HasValue)
+            {
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(cachedResult!);
+                return;
+            }
+        }
+        
+        // Wait before next poll
+        await Task.Delay(pollInterval);
+    }
+    
+    // Timeout - return whatever we have or error
+    var finalCachedResult = await db.StringGetAsync(cacheKey);
+    if (finalCachedResult.HasValue)
+    {
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(finalCachedResult!);
+    }
+    else
+    {
+        context.Response.StatusCode = 504; // Gateway Timeout
+        await context.Response.WriteAsync("{\"error\": \"Cache wait timeout\"}");
+    }
+}
 
 // Helper method to convert OpenAI format request to native Ollama format
 static string ConvertToNativeFormat(string openAiRequest)
@@ -172,14 +283,12 @@ static string ConvertToNativeFormat(string openAiRequest)
         using var doc = JsonDocument.Parse(openAiRequest);
         var root = doc.RootElement;
         
-        // Extract model name
         string model = "";
         if (root.TryGetProperty("model", out var modelProp))
         {
             model = modelProp.GetString() ?? "";
         }
         
-        // Extract input text(s)
         string input = "";
         if (root.TryGetProperty("input", out var inputProp))
         {
@@ -189,19 +298,16 @@ static string ConvertToNativeFormat(string openAiRequest)
             }
             else if (inputProp.ValueKind == JsonValueKind.Array)
             {
-                // Take first element if array
                 var firstElement = inputProp[0];
                 input = firstElement.GetString() ?? "";
             }
         }
         
-        // Create native format
         var nativeFormat = new { model = model, input = input };
         return JsonSerializer.Serialize(nativeFormat);
     }
     catch
     {
-        // Return as-is if parsing fails
         return openAiRequest;
     }
 }
@@ -214,14 +320,12 @@ static async Task WriteOpenAiResponse(HttpContext context, string nativeResponse
         using var doc = JsonDocument.Parse(nativeResponse);
         var root = doc.RootElement;
         
-        // Extract model name
         string modelName = "";
         if (root.TryGetProperty("model", out var modelProp))
         {
             modelName = modelProp.GetString() ?? "";
         }
         
-        // Extract embeddings from native response
         var embeddings = new List<List<float>>();
         if (root.TryGetProperty("embeddings", out var embProp) && embProp.ValueKind == JsonValueKind.Array)
         {
@@ -236,7 +340,6 @@ static async Task WriteOpenAiResponse(HttpContext context, string nativeResponse
             }
         }
         
-        // Create OpenAI format response
         var openAiResponse = new
         {
             @object = "embedding",
@@ -260,7 +363,6 @@ static async Task WriteOpenAiResponse(HttpContext context, string nativeResponse
     }
     catch
     {
-        // Return native response as-is if conversion fails
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = 200;
         await context.Response.WriteAsync(nativeResponse);
