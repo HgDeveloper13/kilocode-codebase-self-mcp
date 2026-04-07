@@ -1,4 +1,4 @@
-# План разработки: Gateway Local Self - RAG-стека
+# Текущий план разработки проекта RAG: Nginx, Gateway, Qdrant, Ollama, Redis, ASP.NET 8, .NET 8, Docker Container
 
 - Используем активно при разработки знания/документацию через use context7. К примеру нужна "информация по ollama asp.net .net 8 docs use context7", тогда будет получена актуальная документация по данной теме!
 
@@ -49,6 +49,11 @@
 - gateway у нас на стеке (.NET 8, ASP.NET 8)!
 - gateway у нас смотрит кэш в Redis, если нету кэша, то отправляет его в ollama!
 - gateway у нас смотрит по модели + хеш (promt) в кэш
+- Gateway использует кэширование по модели + SHA256 хешу всего тела запроса
+- Ключ кэша: `emb:{sha256_hex_hash}`
+- Пример: `emb:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824`
+- TTL: 7 дней
+- Кэш хранится в Redis
 - У нас получается nginx единственная точка входа. Nginx прямо на qdrant отправляет запросы, пользователь обращается по стандартной схеме к qdrant localhost:6333. gateway > redis. gateway > ollama. nginx > gateway.
 - Ollama работает без GPU, все вычисления на CPU
 - Ollama: CPU-режим (OLLAMA_GPU_LAYERS=0)
