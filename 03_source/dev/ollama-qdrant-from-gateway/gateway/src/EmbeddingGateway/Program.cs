@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using StackExchange.Redis;
+using EmbeddingGateway.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,10 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 });
 
 var app = builder.Build();
+
+// Configure CacheLogger from appsettings.json
+var cacheFormat = builder.Configuration["Logging:CacheFormat"] ?? "text";
+CacheLogger.Configure(cacheFormat.Equals("json", StringComparison.OrdinalIgnoreCase));
 
 // Constants for cache settings (moved to class level for static function access)
 const int CacheTtlDays = 7;
@@ -65,6 +70,7 @@ app.MapPost("/api/embed", async (HttpContext context, IConnectionMultiplexer red
     
     if (cachedResult.HasValue)
     {
+        CacheLogger.Hit(cacheKey, body.Length);
         context.Response.ContentType = "application/json";
         await context.Response.WriteAsync(cachedResult!);
         return;
@@ -76,6 +82,7 @@ app.MapPost("/api/embed", async (HttpContext context, IConnectionMultiplexer red
     
     if (inProgress.HasValue)
     {
+        CacheLogger.Coalesced(cacheKey);
         // Another client is processing - wait for cache to be ready
         await WaitForCacheAsync(context, db, cacheKey, inProgressKey);
         return;
@@ -87,6 +94,8 @@ app.MapPost("/api/embed", async (HttpContext context, IConnectionMultiplexer red
     
     try
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
         var ollamaClient = httpClientFactory.CreateClient();
         ollamaClient.BaseAddress = new Uri(ollamaUrl);
         ollamaClient.Timeout = TimeSpan.FromMinutes(5);
@@ -99,6 +108,7 @@ app.MapPost("/api/embed", async (HttpContext context, IConnectionMultiplexer red
         {
             // Store in Redis cache (7 days TTL)
             await db.StringSetAsync(cacheKey, responseContent, TimeSpan.FromDays(CacheTtlDays));
+            CacheLogger.Miss(cacheKey, body.Length, stopwatch.Elapsed.TotalSeconds);
         }
         
         context.Response.ContentType = "application/json";
@@ -125,6 +135,7 @@ app.MapPost("/api/embeddings", async (HttpContext context, IConnectionMultiplexe
     
     if (cachedResult.HasValue)
     {
+        CacheLogger.Hit(cacheKey, body.Length);
         context.Response.ContentType = "application/json";
         await context.Response.WriteAsync(cachedResult!);
         return;
@@ -136,6 +147,7 @@ app.MapPost("/api/embeddings", async (HttpContext context, IConnectionMultiplexe
     
     if (inProgress.HasValue)
     {
+        CacheLogger.Coalesced(cacheKey);
         // Another client is processing - wait for cache to be ready
         await WaitForCacheAsync(context, db, cacheKey, inProgressKey);
         return;
@@ -146,6 +158,8 @@ app.MapPost("/api/embeddings", async (HttpContext context, IConnectionMultiplexe
     
     try
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
         var ollamaClient = httpClientFactory.CreateClient();
         ollamaClient.BaseAddress = new Uri(ollamaUrl);
         ollamaClient.Timeout = TimeSpan.FromMinutes(5);
@@ -157,6 +171,7 @@ app.MapPost("/api/embeddings", async (HttpContext context, IConnectionMultiplexe
         if (response.IsSuccessStatusCode)
         {
             await db.StringSetAsync(cacheKey, responseContent, TimeSpan.FromDays(CacheTtlDays));
+            CacheLogger.Miss(cacheKey, body.Length, stopwatch.Elapsed.TotalSeconds);
         }
         
         context.Response.ContentType = "application/json";
@@ -182,6 +197,7 @@ app.MapPost("/v1/embeddings", async (HttpContext context, IConnectionMultiplexer
     
     if (cachedResult.HasValue)
     {
+        CacheLogger.Hit(cacheKey, body.Length);
         await WriteOpenAiResponse(context, cachedResult!, body);
         return;
     }
@@ -192,6 +208,7 @@ app.MapPost("/v1/embeddings", async (HttpContext context, IConnectionMultiplexer
     
     if (inProgress.HasValue)
     {
+        CacheLogger.Coalesced(cacheKey);
         // Another client is processing - wait for cache to be ready
         await WaitForCacheAsync(context, db, cacheKey, inProgressKey);
         return;
@@ -202,6 +219,8 @@ app.MapPost("/v1/embeddings", async (HttpContext context, IConnectionMultiplexer
     
     try
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
         // Convert from OpenAI format to native format
         var nativeRequest = ConvertToNativeFormat(body);
         
@@ -216,6 +235,7 @@ app.MapPost("/v1/embeddings", async (HttpContext context, IConnectionMultiplexer
         if (response.IsSuccessStatusCode)
         {
             await db.StringSetAsync(cacheKey, responseContent, TimeSpan.FromDays(CacheTtlDays));
+            CacheLogger.Miss(cacheKey, body.Length, stopwatch.Elapsed.TotalSeconds);
         }
         
         await WriteOpenAiResponse(context, responseContent, body);
