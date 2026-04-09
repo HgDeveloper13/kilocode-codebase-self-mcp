@@ -2,7 +2,7 @@
 
 [CONTEXT]
 
-Проект RAG использует стек: .NET 8 Gateway + Redis + Nginx + Ollama + Qdrant. В процессе работы реализованы механизмы кэширования и ожидания кэша для оптимизации повторных запросов.
+Проект RAG использует стек: .NET 8 Gateway + Redis + Nginx + Ollama + Qdrant. В процессе работы реализованы механизмы кэширования, ожидания кэша и сервис логирования кэша CacheLogger для оптимизации повторных запросов.
 
 [INSTRUCTION]
 
@@ -47,6 +47,26 @@
 | Max wait time | 5 минут (300 сек) |
 | Таймаут клиента | Код 499 (Client closed) |
 | Таймаут ожидания | Код 504 (Gateway Timeout) |
+
+### Сервис логирования кэша (CacheLogger)
+
+| Параметр | Значение |
+|----------|----------|
+| Класс | Статический класс `CacheLogger` в `Services/CacheLogger.cs` |
+| Методы | `Hit(string key, int size)`, `Miss(string key, int size, double durationSec)`, `Coalesced(string key)` |
+| Переключатель формата | Через `appsettings.json` `"Logging": { "CacheFormat": "text" }` или `"json"` |
+| Формат text | `[CACHE_HIT] emb:... | 3.0KB | 12:27:36.261` |
+| Формат json | `{"ts":"...","event":"CACHE_HIT","key":"emb:...","size":3000,"duration":null}` |
+| Потокобезопасность | `volatile bool _useJson` |
+
+### Планируемые метрики Prometheus
+
+| Метрика | Тип | Описание |
+|---------|-----|----------|
+| `rag_cache_hits_total` | Counter | Счётчик хитов кэша |
+| `rag_cache_misses_total` | Counter | Счётчик миссов кэша |
+| `rag_cache_coalesced_total` | Counter | Счётчик coalesced-запросов |
+| `rag_inference_duration_seconds` | Histogram | Время инференса Ollama |
 
 ---
 
@@ -121,6 +141,14 @@ docker exec -it redis-cache redis-cli
 > KEYS emb:*
 > TTL <key>
 ```
+
+### Как включить JSON формат для логов CacheLogger?
+
+В `appsettings.json` установить `"Logging": { "CacheFormat": "json" }`, затем пересобрать Gateway.
+
+### Как проверить логи CacheLogger?
+
+Посмотреть логи Gateway: `docker logs embedding-gateway --tail 50`, искать строки с [CACHE_HIT], [CACHE_MISS], [CACHE_COALESCED].
 
 ---
 
@@ -204,6 +232,28 @@ docker exec -it redis-cache redis-cli
 | 5 | Обработать таймаут | Вернуть 504 при истечении 5 минут |
 | 6 | Удалить in-progress flag | `await db.KeyDeleteAsync($"in-progress:{cacheKey}")` в finally блоке |
 | 7 | Тестировать | Два параллельных запроса: первый - в Ollama, второй - ждёт кэш |
+
+### Workflow: Реализация сервиса логирования кэша CacheLogger
+
+| Шаг | Действие | Код/Изменение |
+|-----|----------|---------------|
+| 1 | Создать файл Services/CacheLogger.cs | Статический класс с методами Hit/Miss/Coalesced |
+| 2 | Добавить переключатель формата | volatile bool _useJson, Configure(bool) |
+| 3 | Реализовать логику форматирования | Text: [EVENT] key | size | ts, JSON: сериализация |
+| 4 | Добавить в Program.cs вызовы | CacheLogger.Hit/Miss/Coalesced в блоках кэша |
+| 5 | Обновить appsettings.json | Добавить "Logging": { "CacheFormat": "text" } |
+| 6 | Пересобрать и протестировать | Проверить логи после запросов |
+
+### Workflow: Добавление Prometheus-метрик (Планируется)
+
+| Шаг | Действие | Код/Изменение |
+|-----|----------|---------------|
+| 1 | Добавить пакет prometheus-net | В .csproj |
+| 2 | Создать сервис метрик | Класс с counters и histogram |
+| 3 | Интегрировать в CacheLogger | Вызывать метрики при Hit/Miss/Coalesced |
+| 4 | Добавить endpoint /metrics | app.MapGet("/metrics", ...) |
+| 5 | Настроить сборщик метрик | Prometheus.Metrics.DefaultRegistry |
+| 6 | Тестировать | curl http://localhost:11435/metrics |
 
 ---
 
