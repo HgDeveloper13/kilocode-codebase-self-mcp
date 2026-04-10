@@ -283,13 +283,10 @@ class EmbeddingTester:
 
     # Список всех доступных моделей для тестирования
     ALL_MODELS = [
-        "embeddinggemma:300m-qat-q8_0",
         "qwen3-embedding:0.6b-fp16",
         "qwen3-embedding:0.6b-q8_0",
-        "embeddinggemma:300m-qat-q4_0",
         "all-minilm:22m-l6-v2-fp16",
         "bge-m3:567m-fp16",
-        "embeddinggemma:300m-bf16",
         "nomic-embed-text:137m-v1.5-fp16",
         "qllama/multilingual-e5-small:f16",
         "all-minilm:l6-v2",

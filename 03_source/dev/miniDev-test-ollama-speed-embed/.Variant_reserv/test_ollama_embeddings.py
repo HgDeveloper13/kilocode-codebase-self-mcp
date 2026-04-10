@@ -66,30 +66,24 @@ INTERVAL_BETWEEN_TESTS = 3  # seconds
 
 # Test models list
 DEFAULT_MODELS = [
-    "embeddinggemma:300m-qat-q8_0",
     "qwen3-embedding:0.6b-fp16",
     "qwen3-embedding:0.6b-q8_0",
-    "embeddinggemma:300m-qat-q4_0",
-    "all-minilm:22m-l6-v2-fp16",
     "bge-m3:567m-fp16",
-    "embeddinggemma:300m-bf16",
     "nomic-embed-text:137m-v1.5-fp16",
-    "qllama/multilingual-e5-small:f16",
-    "all-minilm:l6-v2",
 ]
 
 # Test texts in Russian and English
 TEST_TEXTS = [
-    "Привет, мир! Как дела?",
-    "Это тестовый текст для проверки embedding моделей.",
-    "Machine learning и искусственный интеллект развиваются очень быстро.",
-    "Python - популярный язык программирования для научных вычислений.",
-    "Docker контейнеризация позволяет упростить развертывание приложений.",
-    "Open source программное обеспечение доступно для всех.",
-    "Нейронные сети используются в различных областях ИИ.",
-    "Векторные базы данных эффективны для поиска по сходству.",
-    "Квантизация моделей снижает размер и увеличивает скорость.",
-    "Embedding модели преобразуют текст в числовые векторы.",
+    "### Workflow: Реализация механизма ожидания кэша для повторных запросов | Шаг | Действие | Код/Проверка | |-----|----------|--------------| | 1 | Добавить in-progress flag | `await db.StringSetAsync(, TimeSpan.FromSeconds(300))` | | 2 | Проверить in-progress при cache miss | `var inProgress = await db.StringGetAsync( | | 3 | Реализовать poll логику | `await Task.Delay(2000)` в цикле до 5 минут | | 4 | Добавить проверку отмены клиента | `if (context.RequestAborted.IsCancellationRequested)` | | 5 | Обработать таймаут | Вернуть 504 при истечении 5 минут | | 6 | Удалить in-progress flag | await db.KeyDeleteAsync( в finally блоке | | 7 | Тестировать | Два параллельных запроса: первый - в Ollama, второй - ждёт кэш | --- ",
+    "public static void Hit(string key, int size)  ValidateArguments(key, size); Log(CACHE_HIT, key, size, null); ",
+    "### Workflow: Диагностика Gateway при ошибках эмбедингов | Шаг | Действие | Команда/Проверка | |-----|----------|------------------| | 1 | Проверить статус контейнеров | `docker ps -a` | | 2 | Проверить логи Gateway | `docker logs embedding-gateway --tail 50` | | 3 | Проверить логи Ollama | `docker logs ollama --tail 30` | | 4 | Определить тип ошибки | Искать Invalid request URI — проблема в IHttpClientFactory | | 5 | Проверить формат запроса | Если клиент использует `/v1/embeddings` — нужна конвертация | ",
+    "private static void Log(string @event, string key, int size, double? durationSeconds)  var timestamp = DateTime.UtcNow; if (_useJson)  // JSON format for Loki/ELK/Prometheus var entry = new  ts = timestamp.ToString(O), @event, key, size, duration = durationSeconds ; Console.WriteLine(JsonSerializer.Serialize(entry));  else  // Human-readable text format for debugging var durationStr = durationSeconds.HasValue ? $ durationSeconds:F1s : ; Console.WriteLine($[@event] key | sizeBdurationStr | timestamp:HH:mm:ss.fff);  ",
+    "### Workflow: Тестирование Gateway после исправлений | Шаг | Действие | Ожидаемый результат | |-----|----------|---------------------| | 1 | Первый запрос (cold start) | ~8 сек, статус 200 | | 2 | Второй запрос (кэш) | ~0.04 сек, статус 200 | | 3 | Проверить формат ответа | object:embedding,data:[...] | | 4 | Проверить логи | Нет ошибок Invalid request URI | ",
+    "### Что происходит при отмене клиентом запроса? При отмене запроса (клиент закрыл соединение) Gateway: - Проверяет `context.RequestAborted.IsCancellationRequested` - Возвращает статус 499 (Client closed request) - Не удаляет in-progress flag (его TTL сам очистит через 5 минут) ",
+    "# RAG Workflows — Memory Notes AI [CONTEXT] Проект RAG использует стек: .NET 8 Gateway + Redis + Nginx + Ollama + Qdrant. В процессе работы реализованы механизмы кэширования и ожидания кэша для оптимизации повторных запросов. [INSTRUCTION] При работе над проектом RAG использовать данные workflows для быстрой верной разработки, быстрой диагностики и исправления. --- ",
+    "### Основные компоненты | Компонент | Порт | Описание | |-----------|------|----------| | Nginx | 11434 | Единая точка входа, проксирует на Gateway и Ollama | | Gateway | 11435 | .NET 8 ASP.NET, кэширует в Redis | | Ollama | 11434 (внутри) | Генерирует embeddings | | Redis | 6379 | Кэш с TTL 7 дней | | Qdrant | 6333 | Векторная БД | ",
+    "### Как пересобрать Gateway после изменений? ```bash cd qdrant-ollama-docker-cfg/pr-core-train-to-ollama-qdrant docker compose build gateway docker compose up -d --force-recreate nginx gateway ``` ",
+    "### Workflow: Исправление IHttpClientFactory в .NET 8 Gateway | Шаг | Действие | Изменение | |-----|----------|-----------| | 1 | Изменить регистрацию HttpClient | `builder.Services.AddHttpClient()` вместо `AddHttpClient(Ollama)` | | 2 | Изменить внедрение в endpoint | `IHttpClientFactory httpClientFactory` вместо `HttpClient ollamaClient` | | 3 | Создать HttpClient в endpoint | `var ollamaClient = httpClientFactory.CreateClient()` | | 4 | Установить BaseAddress | `ollamaClient.BaseAddress = new Uri(ollamaUrl)` | | 5 | Пересобрать контейнер | `docker compose build gateway` | "
 ]
 
 # ============================================================================
